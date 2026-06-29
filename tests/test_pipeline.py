@@ -10,7 +10,9 @@ from credit_risk.pipeline import load_dataset, missing_summary, run_pipeline
 
 def test_load_dataset_normalizes_columns(tmp_path):
     dataset = tmp_path / "sample.csv"
-    pd.DataFrame({"Credit Limit": [100, None], "Default": [0, 1]}).to_csv(dataset, index=False)
+    pd.DataFrame({"Credit Limit": [100, None], "Default": [0, 1]}).to_csv(
+        dataset, index=False
+    )
     df = load_dataset(dataset)
     assert list(df.columns) == ["credit_limit", "default"]
 
