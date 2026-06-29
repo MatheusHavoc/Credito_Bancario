@@ -1,10 +1,17 @@
 # Credito Bancario - Credit Risk Analysis
 
-Professional Python project for exploratory credit-risk analysis. The original notebook is preserved and reusable project code now lives in `src/credit_risk/`.
+This repository contains the original Taiwan credit analysis notebook and a new lightweight Python profiling layer under `src/credit_risk/`.
 
-## Staff Data Engineer assessment
+## What this PR changes
 
-This repository is valuable for fintech and banking interviews because it works with customer behavior, payment history and risk signals. The main gap was that all logic lived in a notebook with local/Drive paths and no reproducible project structure.
+The notebook remains the source of the full exploratory analysis. The Python code added here does not train a credit-risk model. It provides:
+
+- local CSV/Excel ingestion with explicit errors;
+- normalized column names;
+- missing-value and numeric profiling outputs;
+- duplicate-row metrics;
+- an optional `default_rate_summary.csv` when a known default target column is present;
+- tests for ingestion and profiling behavior.
 
 ## Structure
 
@@ -20,7 +27,11 @@ This repository is valuable for fintech and banking interviews because it works 
 └── README.md
 ```
 
-## How to run
+## Dataset requirement
+
+The expected local input is `data/raw/credit_card_clients.csv`. That file is not committed. Without it, the pipeline cannot be executed end to end.
+
+## How to run when the dataset is available
 
 ```bash
 python -m venv .venv
@@ -30,18 +41,20 @@ python -m pytest
 python -m credit_risk.pipeline --input data/raw/credit_card_clients.csv --output data/processed
 ```
 
-## Pipeline capabilities
+## Outputs
 
-- CSV/Excel ingestion with clear errors.
-- Column-name normalization.
-- Missing-value summary.
-- Numeric profiling.
-- Duplicate-row metrics.
-- Artifact generation in `data/processed/`.
+Always generated when the input file exists:
+
+- `data/processed/missing_summary.csv`
+- `data/processed/numeric_summary.csv`
+- `data/processed/dataset_metrics.json`
+
+Generated only when a known default target column exists:
+
+- `data/processed/default_rate_summary.csv`
 
 ## Current limitations
 
-- The dataset is not committed and must be provided locally.
-- Predictive modeling should be extracted from the notebook in a later PR.
-- Expected schema and target definitions should be formalized.
-- A final executive risk summary should be generated automatically.
+- Predictive modeling still lives in future work; it is not implemented in this PR.
+- Dataset source, schema and target definition need stronger documentation.
+- The README avoids claiming banking production readiness or model performance that has not been validated.
