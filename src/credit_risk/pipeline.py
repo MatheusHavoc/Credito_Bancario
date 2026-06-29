@@ -18,12 +18,11 @@ class DataValidationError(ValueError):
 
 @dataclass(frozen=True)
 class ProjectConfig:
-    """Runtime configuration for the project pipeline."""
+    """Runtime configuration for the credit-risk profiling pipeline."""
 
     project_name: str
     default_dataset: str
-    target_column: str | None = None
-    required_columns: tuple[str, ...] = ()
+    possible_target_columns: tuple[str, ...] = ("default_payment_next_month", "default.payment.next.month", "default")
 
 
 CONFIG = ProjectConfig("Credit risk analysis", "credit_card_clients.csv")
@@ -31,7 +30,7 @@ CONFIG = ProjectConfig("Credit risk analysis", "credit_card_clients.csv")
 
 def normalize_column_name(column: object) -> str:
     """Return a normalized column name."""
-    return str(column).strip().lower().replace(" ", "_").replace("-", "_")
+    return str(column).strip().lower().replace(" ", "_").replace("-", "_").replace(".", "_")
 
 
 def load_dataset(path: str | Path, required_columns: Sequence[str] = ()) -> pd.DataFrame:
@@ -69,13 +68,30 @@ def numeric_summary(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame() if numeric_df.empty else numeric_df.describe().transpose().reset_index(names="column")
 
 
+def default_rate_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Return default-rate summary when a known default target column is available."""
+    target_column = next((column for column in CONFIG.possible_target_columns if column in df.columns), None)
+    if target_column is None:
+        LOGGER.info("Skipping default-rate summary; no known default target column was found")
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "metric": ["records", "default_rate"],
+            "value": [int(len(df)), float(df[target_column].mean())],
+        }
+    )
+
+
 def run_pipeline(input_path: str | Path, output_dir: str | Path = "data/processed") -> dict[str, Any]:
-    """Run data-quality checks and write reusable artifacts."""
+    """Run local profiling and optional credit-default summaries for an available dataset."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    df = load_dataset(input_path, CONFIG.required_columns)
+    df = load_dataset(input_path)
     missing_summary(df).to_csv(output_path / "missing_summary.csv", index=False)
     numeric_summary(df).to_csv(output_path / "numeric_summary.csv", index=False)
+    default_summary = default_rate_summary(df)
+    if not default_summary.empty:
+        default_summary.to_csv(output_path / "default_rate_summary.csv", index=False)
     metrics = {"row_count": int(len(df)), "duplicate_rows": int(df.duplicated().sum())}
     (output_path / "dataset_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     LOGGER.info("Pipeline completed for %s", CONFIG.project_name)
